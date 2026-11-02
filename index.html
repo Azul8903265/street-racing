@@ -1,0 +1,154 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Street Racing X</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080817;color:white;font-family:Arial;text-align:center}
+h1{color:#20f5ff;text-shadow:0 0 15px #ff24c9;font-size:clamp(32px,8vw,55px)}
+main{max-width:850px;margin:auto;padding:12px}
+.panel{background:#171733;border:1px solid #713dba;border-radius:16px;padding:12px;margin:12px 0}
+button{background:#24244c;color:white;border:1px solid #21eaff;border-radius:10px;padding:13px;font-weight:bold;margin:4px}
+button:active{background:#a323a9}
+canvas{width:100%;border:2px solid #a33cff;border-radius:12px;background:#15152b}
+.controls{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.controls button{padding:18px 5px}
+#message{color:#ffe66b;min-height:25px;font-weight:bold}
+</style>
+</head>
+<body>
+<main>
+<h1>STREET RACING X</h1>
+<p>🏁 RACE FAST. USE NITRO. BECOME CHAMPION.</p>
+<section class="panel">
+<h3>CHOOSE YOUR CAR</h3>
+<button onclick="choose(0)">🔴 Red Supercar</button>
+<button onclick="choose(1)">🔵 Blue Racer</button>
+<button onclick="choose(2)">🟢 Green Speedster</button>
+<br><button onclick="start()" style="background:#a323a9">START RACE</button>
+</section>
+<section class="panel">
+<div style="display:flex;justify-content:space-around">
+<div>SPEED<br><b id="speed">0</b> MPH</div>
+<div>DISTANCE<br><b id="distance">0</b> m</div>
+<div>NITRO<br><b id="nitro">100</b>%</div>
+</div>
+<canvas id="game" width="700" height="500"></canvas>
+<div id="message">Choose your car and start racing!</div>
+<div class="controls">
+<button id="left">⬅ LEFT</button>
+<button id="gas">⬆ GAS</button>
+<button id="right">RIGHT ➡</button>
+<button id="brake">BRAKE</button>
+<button id="boost">⚡ NITRO</button>
+<button onclick="start()">RESTART</button>
+</div>
+</section>
+<p>Use arrow keys or touch controls to race!</p>
+</main>
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const colors=["#ff304e","#258bff","#38ee91"];
+let carColor=colors[0],running=false,speed=0,distance=0,nitro=100;
+let x=350,roadOffset=0,obstacles=[],last=0,score=0;
+let keys={left:false,right:false,gas:false,brake:false,boost:false};
+function choose(n){carColor=colors[n];draw();say("Your new car is ready!")}
+function say(t){document.getElementById("message").textContent=t}
+function start(){
+ running=true;speed=0;distance=0;nitro=100;x=350;
+ obstacles=[];roadOffset=0;last=0;score=0;
+ say("🏁 GO! GO! GO!");requestAnimationFrame(loop);
+}
+function car(x,y,color,player=false){
+ ctx.save();ctx.translate(x,y);
+ ctx.shadowColor=color;ctx.shadowBlur=player?18:8;
+ ctx.fillStyle=color;
+ ctx.beginPath();ctx.roundRect(-22,-38,44,75,10);ctx.fill();
+ ctx.shadowBlur=0;
+ ctx.fillStyle="#111827";
+ ctx.fillRect(-16,-24,32,23);
+ ctx.fillStyle="#d8f6ff";ctx.fillRect(-15,-21,30,5);
+ ctx.fillStyle="#ffef9c";ctx.fillRect(-16,29,9,5);ctx.fillRect(7,29,9,5);
+ ctx.fillStyle="#090914";
+ ctx.fillRect(-27,-24,6,17);ctx.fillRect(21,-24,6,17);
+ ctx.fillRect(-27,17,6,17);ctx.fillRect(21,17,6,17);
+ ctx.restore();
+}
+function draw(){
+ ctx.clearRect(0,0,700,500);
+ ctx.fillStyle="#12102b";ctx.fillRect(0,0,700,500);
+ for(let i=0;i<10;i++){
+ ctx.fillStyle=i%2?"#211b48":"#2b2054";
+ ctx.fillRect(i*75,0,60,180);
+ ctx.fillStyle="#20eaff";ctx.fillRect(i*75+15,30,4,40);
+ ctx.fillStyle="#ff35c8";ctx.fillRect(i*75+35,90,5,35);
+ }
+ ctx.fillStyle="#343344";ctx.fillRect(115,0,470,500);
+ ctx.fillStyle="#f5f5ff";ctx.fillRect(108,0,7,500);ctx.fillRect(585,0,7,500);
+ for(let y=-40;y<550;y+=100){
+ let yy=(y+roadOffset)%600;
+ ctx.fillStyle="#ffe66b";ctx.fillRect(344,yy,12,48);
+ }
+ obstacles.forEach(o=>car(o.x,o.y,"#ffb52c"));
+ car(x,405,carColor,true);
+ if(speed>0){
+ ctx.fillStyle="#ffffff";ctx.globalAlpha=.35;
+ for(let i=0;i<12;i++)ctx.fillRect(130+i*40,Math.random()*500,2,20);
+ ctx.globalAlpha=1;
+ }
+}
+function updateHUD(){
+ document.getElementById("speed").textContent=Math.round(speed*2);
+ document.getElementById("distance").textContent=Math.floor(distance);
+ document.getElementById("nitro").textContent=Math.floor(nitro);
+}
+function loop(t){
+ if(!running)return;
+ let dt=Math.min((t-last)/16||1,2);last=t;
+ if(keys.gas)speed=Math.min(100,speed+0.7*dt);
+ else speed=Math.max(0,speed-0.2*dt);
+ if(keys.brake)speed=Math.max(0,speed-1.2*dt);
+ if(keys.boost&&nitro>0&&speed>5){speed=Math.min(150,speed+1.2*dt);nitro=Math.max(0,nitro-0.6*dt)}
+ else nitro=Math.min(100,nitro+0.08*dt);
+ if(keys.left)x=Math.max(145,x-5*dt);
+ if(keys.right)x=Math.min(555,x+5*dt);
+ distance+=speed*dt/100;
+ roadOffset=(roadOffset+speed*dt)%100;
+ if(Math.random()<0.018*dt&&speed>10)obstacles.push({x:185+Math.random()*330,y:-60});
+ obstacles.forEach(o=>o.y+=speed*0.13*dt);
+ obstacles=obstacles.filter(o=>o.y<560);
+ for(let o of obstacles){
+ if(Math.abs(o.x-x)<42&&Math.abs(o.y-405)<60){
+ running=false;speed=0;say("💥 CRASH! Tap RESTART to race again.");updateHUD();draw();return;
+ }}
+ if(distance>=1000){running=false;speed=0;say("🏆 YOU WIN! STREET RACING CHAMPION!");draw();updateHUD();return}
+ updateHUD();draw();requestAnimationFrame(loop);
+}
+function bind(id,key){
+ let b=document.getElementById(id);
+ b.addEventListener("pointerdown",e=>{e.preventDefault();keys[key]=true});
+ ["pointerup","pointerleave","pointercancel"].forEach(ev=>b.addEventListener(ev,()=>keys[key]=false));
+}
+bind("left","left");bind("right","right");bind("gas","gas");bind("brake","brake");bind("boost","boost");
+window.addEventListener("keydown",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a")keys.left=true;
+ if(e.key==="ArrowRight"||e.key==="d")keys.right=true;
+ if(e.key==="ArrowUp"||e.key==="w")keys.gas=true;
+ if(e.key==="ArrowDown"||e.key==="s")keys.brake=true;
+ if(e.code==="Space")keys.boost=true;
+});
+window.addEventListener("keyup",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a")keys.left=false;
+ if(e.key==="ArrowRight"||e.key==="d")keys.right=false;
+ if(e.key==="ArrowUp"||e.key==="w")keys.gas=false;
+ if(e.key==="ArrowDown"||e.key==="s")keys.brake=false;
+ if(e.code==="Space")keys.boost=false;
+});
+draw();updateHUD();
+</script>
+</body>
+</html>
